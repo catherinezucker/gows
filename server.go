@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 )
 
 func healthcheck(w http.ResponseWriter, r *http.Request)  {
@@ -11,10 +12,11 @@ func healthcheck(w http.ResponseWriter, r *http.Request)  {
 }
 
 func main() {
-	directory := "/Users/robertcarney/tmp/server-test";
+	directory := os.Args[1]
+	port := ":" + os.Args[2]
 	http.HandleFunc("/healthcheck", healthcheck)
 	http.Handle("/", http.FileServer(http.Dir(directory)))
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		log.Fatal("Listen and serve: ", err)
 	}
