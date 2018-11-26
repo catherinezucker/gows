@@ -1,3 +1,6 @@
+# Project binaries
+server
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
