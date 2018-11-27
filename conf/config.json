@@ -1,0 +1,12 @@
+{
+  "workers" :[
+    {
+      "host" : "one",
+      "port" : 1
+    },
+    {
+      "host" : "two",
+      "port" : 2
+    }
+  ]
+}
