@@ -92,6 +92,5 @@ func main()  {
 	go monitorServers(serverJobs, monitorServersQuitChannel)
 	signals := make(chan os.Signal, 2)
 	signal.Notify(signals, os.Interrupt, os.Kill)
-	go cleanUpOnSignal(signals, serverJobs, quitChannels)
-	for {  }
+	cleanUpOnSignal(signals, serverJobs, quitChannels)
 }
