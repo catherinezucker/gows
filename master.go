@@ -38,6 +38,7 @@ func initServers(serverJobs chan ServerJob)  {
 	go startServer("/Users/robertcarney", 9091, serverJobs)
 }
 
+// Monitors the servers in serverJobs, and returns when it recieves on the quitChannel
 func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 	defer close(quitChannel)
 	for  {
@@ -57,6 +58,7 @@ func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 			if (currentJob.command == nil || currentJob.command.ProcessState != nil) {
 				log.Printf("Server process at port: %d with PID: %d exited\n", 
 					currentJob.port, currentJob.command.Process.Pid)
+				continue
 			}
 			// And put it back on the channel
 			serverJobs <- currentJob
