@@ -1,7 +1,7 @@
 package main
 
 import(
-	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,16 +17,18 @@ type ServerJob struct {
 }
 
 func startServer(dir string, port int, serverJobs chan ServerJob)  {
+	// Start the server
 	cmd := exec.Command("./server", dir, strconv.Itoa(port))
 	err := cmd.Start()
 	if err != nil {
-		fmt.Println("Something went wrong")
+		log.Printf("Server at port: %d failed to start\n", port)
+		return
 	}
+	// Add server to the channel of server jobs
 	serverJobs <- ServerJob{port, dir, cmd}
-	fmt.Printf("Started server for directory %s at port :%d\n", dir, port)
+	log.Printf("Started server for directory %s at port :%d with PID: %d\n", dir, port, cmd.Process.Pid)
 	err = cmd.Wait()
-	fmt.Printf("Server at port :%d exited with error code %v\n", 
-		port, err)
+	log.Printf("Server at port :%d exited with error code %v\n", port, err)
 }
 
 func initServers(serverJobs chan ServerJob)  {
@@ -38,20 +40,17 @@ func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 	for  {
 		select {
 		case <-quitChannel:
-			fmt.Println("Recieved quit signal")
 			close(quitChannel)
 			return
 		default:
-			time.Sleep(1 * time.Second)
-			fmt.Println("Looking for a server to monitor")
+			time.Sleep(5 * time.Second)
 			currentJob := <- serverJobs
-			fmt.Printf("Looking at server on port: %d\n", currentJob.port)
-			if (currentJob.command == nil) {
-				fmt.Println("Server process exited")
-				continue
+			log.Printf("Looking at server on port: %d\n", currentJob.port)
+			if (currentJob.command == nil || currentJob.command.ProcessState != nil) {
+				log.Printf("Server process at port: %d with PID: %d exited\n", 
+					currentJob.port, currentJob.command.Process.Pid)
 			}
 			serverJobs <- currentJob
-			fmt.Printf("Done monitoring server at port %d\n", currentJob.port)
 		}
 	}
 }
@@ -72,6 +71,7 @@ func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChan
 }
 
 func main()  {
+	log.SetOutput(os.Stderr)
 	serverJobs := make(chan ServerJob, 2)
 	var quitChannels []chan bool
 	go initServers(serverJobs)
