@@ -16,6 +16,7 @@ type ServerJob struct {
 	command *exec.Cmd
 }
 
+// Starts a single server and adds it on to the channel
 func startServer(dir string, port int, serverJobs chan ServerJob)  {
 	// Start the server
 	cmd := exec.Command("./server", dir, strconv.Itoa(port))
@@ -31,30 +32,39 @@ func startServer(dir string, port int, serverJobs chan ServerJob)  {
 	log.Printf("Server at port :%d exited with error code %v\n", port, err)
 }
 
+// Starts servers and adds them on to the channel
 func initServers(serverJobs chan ServerJob)  {
 	go startServer("/Users/robertcarney", 9090, serverJobs)
 	go startServer("/Users/robertcarney", 9091, serverJobs)
 }
 
 func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
+	defer close(quitChannel)
 	for  {
 		select {
 		case <-quitChannel:
-			close(quitChannel)
+			// We recieved a signal to stop monitoring
 			return
 		default:
+			// We only want to monitor on some time interval, so sleep first
+			//   NOTE: This will make the master process take roughly this amount
+			//   of time to tear down when it recieves an exit signal
 			time.Sleep(5 * time.Second)
+			// Get a job from the channel...
 			currentJob := <- serverJobs
 			log.Printf("Looking at server on port: %d\n", currentJob.port)
+			// Monitor the job...
 			if (currentJob.command == nil || currentJob.command.ProcessState != nil) {
 				log.Printf("Server process at port: %d with PID: %d exited\n", 
 					currentJob.port, currentJob.command.Process.Pid)
 			}
+			// And put it back on the channel
 			serverJobs <- currentJob
 		}
 	}
 }
 
+// Cleans up the running child processes (servers) when the program recieves an error signal
 func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChannels []chan bool)  {
 	defer close(signals)
 	<-signals
