@@ -55,7 +55,7 @@ func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 			currentJob := <- serverJobs
 			log.Printf("Looking at server on port: %d\n", currentJob.port)
 			// Monitor the job...
-			if (currentJob.command == nil || currentJob.command.ProcessState != nil) {
+			if (!serverIsHealthy(currentJob)) {
 				log.Printf("Server process at port: %d with PID: %d exited\n", 
 					currentJob.port, currentJob.command.Process.Pid)
 				continue
@@ -64,6 +64,12 @@ func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 			serverJobs <- currentJob
 		}
 	}
+}
+
+// Checks on the health of a server job by sending a test request to the /healthcheck endpoint
+func serverIsHealthy(serverJob ServerJob) bool {
+	// TODO
+	return true
 }
 
 // Cleans up the running child processes (servers) when the program recieves an error signal
