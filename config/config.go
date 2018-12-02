@@ -6,13 +6,19 @@ import (
 	"os"
 )
 
-type Config struct {
-	Workers []struct {
-		Host     string `json:"host"`
-		Port     int `json:"port"`
-	} `json:"workers"`
+// ServerWorker is the data structure representing a single server worker
+type ServerWorker struct {
+	Port int `json:"port"`
 }
 
+// Config is the data structure representing the server configuration
+type Config struct {
+	Workers []ServerWorker `json:"workers"`
+	BaseDirectory string `json:"baseDirectory"`
+	MasterPort int `json:"masterPort"`
+}
+
+// LoadConfiguration loads configuration given the config file
 func LoadConfiguration(file string) Config {
 	var config Config
 	configFile, err := os.Open(file)
@@ -23,10 +29,4 @@ func LoadConfiguration(file string) Config {
 	jsonParser := json.NewDecoder(configFile)
 	jsonParser.Decode(&config)
 	return config
-}
-
-func main() {
-	f := "/Users/donaldhamnett/GolandProjects/gows/conf/config.json"
-	c := LoadConfiguration(f)
-	fmt.Print(c)
 }

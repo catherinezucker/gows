@@ -1,12 +1,12 @@
 {
   "workers" :[
     {
-      "host" : "one",
-      "port" : 1
+      "port" : 9000
     },
     {
-      "host" : "two",
-      "port" : 2
+      "port" : 9001
     }
-  ]
+  ],
+  "baseDirectory": "/Users/robertcarney/tmp/",
+  "masterPort": 9090
 }

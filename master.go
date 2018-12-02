@@ -11,6 +11,8 @@ import(
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/robcarney/gows/config"
 )
 
 var baseDirectory string
@@ -23,25 +25,30 @@ type ServerJob struct {
 }
 
 // Starts a single server and adds it on to the channel
-func startServer(dir string, port int, serverJobs chan ServerJob)  {
+func startServer(worker config.ServerWorker) (ServerJob, error) {
 	// Start the server
-	cmd := exec.Command("./server/server", dir, strconv.Itoa(port))
+	cmd := exec.Command("./server/server", baseDirectory, strconv.Itoa(worker.Port))
 	err := cmd.Start()
 	if err != nil {
-		log.Printf("Server at port: %d failed to start\n", port)
-		return
+		log.Printf("Server at port: %d failed to start\n", worker.Port)
 	}
-	// Add server to the channel of server jobs
-	serverJobs <- ServerJob{port, dir, cmd}
-	log.Printf("Started server for directory %s at port :%d with PID: %d\n", dir, port, cmd.Process.Pid)
-	err = cmd.Wait()
-	log.Printf("Server at port :%d exited with error code %v\n", port, err)
+	log.Printf("Started server for directory %s at port :%d with PID: %d\n", 
+		baseDirectory, worker.Port, cmd.Process.Pid)
+	return ServerJob{
+		port: worker.Port,
+		dir: baseDirectory,
+		command: cmd,
+	}, err
 }
 
 // Starts servers and adds them on to the channel
-func initServers(serverJobs chan ServerJob)  {
-	go startServer(baseDirectory, 9000, serverJobs)
-	go startServer(baseDirectory, 9001, serverJobs)
+func initServers(serverJobs chan ServerJob, workers []config.ServerWorker)  {
+	for _, worker := range workers  {
+		job, err := startServer(worker)
+		if (err == nil)  {
+			serverJobs <- job
+		}
+	}
 }
 
 // Monitors the servers in serverJobs, and returns when it recieves on the quitChannel
@@ -94,52 +101,56 @@ func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChan
 	os.Exit(1)
 }
 
-
+// Returns a http handler function requests to a port popped off the given channel for the given endpoint
 func redirectOnChannel(ports chan int, endpoint string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request)  {
-		fmt.Println("In return func")
 		currentPort := <-ports
-		fmt.Printf("Port recieved from channel was %d\n", currentPort)
 		ports <- currentPort
 		http.Redirect(w, r, fmt.Sprintf("http://localhost:%d/%s", currentPort, endpoint), 301)
 	}
 }
 
+// Returns a function to be called for each file and directory in the base directory with filepath.Walk
+//   The function returned sets up an endpoint for the given file
 func getFileVisitor(ports chan int) func(path string, info os.FileInfo, err error) error {
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+		// No endpoints for directories
 		if info.IsDir()  {
 			return nil
 		}
+		// Get the relative path to be used in the endpoint
 		relativePath := strings.Replace(path, baseDirectory, "", 1)
 		if relativePath[:0] != "/"  {
 			relativePath = "/" + relativePath
 		}
-		fmt.Printf("Setting up endpoint for %s\n", relativePath)
+		log.Printf("Setting up endpoint for %s\n", relativePath)
+		// Bind the http handler
 		http.HandleFunc(relativePath, redirectOnChannel(ports, relativePath))
 		return nil
 	}
 }
 
+// Sets up endpoints for all files in the base directory
 func setUpFileEndpoints(ports chan int)  {
-	fmt.Println("Setting up file endpoints")
 	err := filepath.Walk(baseDirectory, getFileVisitor(ports))
 	if err != nil  {
 		log.Fatal("setUpFileEndpoints: ", err)
 	}
 }
 
-func main()  {
-	baseDirectory = "/Users/robertcarney/tmp/"
-	log.SetOutput(os.Stderr)
-	serverJobs := make(chan ServerJob, 2)
+// Run starts the master server based on the given configuration parameters
+func Run(serverConfig config.Config)  {
+	baseDirectory = serverConfig.BaseDirectory
+	serverJobs := make(chan ServerJob, len(serverConfig.Workers))
 	var quitChannels []chan bool
-	ports := make(chan int, 2)
-	ports <- 9000
-	ports <- 9001
-	go initServers(serverJobs)
+	ports := make(chan int, len(serverConfig.Workers))
+	for _, worker := range serverConfig.Workers  {
+		ports <- worker.Port
+	}
+	initServers(serverJobs, serverConfig.Workers)
 	monitorServersQuitChannel := make(chan bool)
 	quitChannels = append(quitChannels, monitorServersQuitChannel)
 	go monitorServers(serverJobs, monitorServersQuitChannel)
@@ -147,5 +158,15 @@ func main()  {
 	signal.Notify(signals, os.Interrupt, os.Kill)
 	go cleanUpOnSignal(signals, serverJobs, quitChannels)
 	setUpFileEndpoints(ports)
-	http.ListenAndServe(":9090", nil)
+	http.ListenAndServe(fmt.Sprintf(":%d", serverConfig.MasterPort), nil)
 }
+
+func main()  {
+	log.SetOutput(os.Stderr)
+	serverConfig := config.LoadConfiguration("conf/config.json")
+	Run(serverConfig)
+}
+
+
+
+
