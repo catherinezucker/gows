@@ -7,9 +7,13 @@ import(
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
+
+var baseDirectory string
 
 // ServerJob represents a server worker process
 type ServerJob struct {
@@ -36,8 +40,8 @@ func startServer(dir string, port int, serverJobs chan ServerJob)  {
 
 // Starts servers and adds them on to the channel
 func initServers(serverJobs chan ServerJob)  {
-	go startServer("/Users/robertcarney", 9000, serverJobs)
-	go startServer("/Users/robertcarney", 9001, serverJobs)
+	go startServer(baseDirectory, 9000, serverJobs)
+	go startServer(baseDirectory, 9001, serverJobs)
 }
 
 // Monitors the servers in serverJobs, and returns when it recieves on the quitChannel
@@ -91,23 +95,50 @@ func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChan
 }
 
 
-func redirectOnChannel(ports chan int) func(w http.ResponseWriter, r *http.Request) {
+func redirectOnChannel(ports chan int, endpoint string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request)  {
 		fmt.Println("In return func")
 		currentPort := <-ports
 		fmt.Printf("Port recieved from channel was %d\n", currentPort)
 		ports <- currentPort
-		http.Redirect(w, r, fmt.Sprintf("http://localhost:%d", currentPort), 301)
+		http.Redirect(w, r, fmt.Sprintf("http://localhost:%d/%s", currentPort, endpoint), 301)
+	}
+}
+
+func getFileVisitor(ports chan int) func(path string, info os.FileInfo, err error) error {
+	return func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir()  {
+			return nil
+		}
+		relativePath := strings.Replace(path, baseDirectory, "", 1)
+		if relativePath[:0] != "/"  {
+			relativePath = "/" + relativePath
+		}
+		fmt.Printf("Setting up endpoint for %s\n", relativePath)
+		http.HandleFunc(relativePath, redirectOnChannel(ports, relativePath))
+		return nil
+	}
+}
+
+func setUpFileEndpoints(ports chan int)  {
+	fmt.Println("Setting up file endpoints")
+	err := filepath.Walk(baseDirectory, getFileVisitor(ports))
+	if err != nil  {
+		log.Fatal("setUpFileEndpoints: ", err)
 	}
 }
 
 func main()  {
+	baseDirectory = "/Users/robertcarney/tmp/"
 	log.SetOutput(os.Stderr)
 	serverJobs := make(chan ServerJob, 2)
 	var quitChannels []chan bool
-	currentChannel := make(chan int, 2)
-	currentChannel <- 9000
-	currentChannel <- 9001
+	ports := make(chan int, 2)
+	ports <- 9000
+	ports <- 9001
 	go initServers(serverJobs)
 	monitorServersQuitChannel := make(chan bool)
 	quitChannels = append(quitChannels, monitorServersQuitChannel)
@@ -115,11 +146,6 @@ func main()  {
 	signals := make(chan os.Signal, 2)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 	go cleanUpOnSignal(signals, serverJobs, quitChannels)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request)  {
-		currentPort := <-currentChannel
-		fmt.Printf("Port recieved from channel was %d\n", currentPort)
-		currentChannel <- currentPort
-		http.Redirect(w, r, fmt.Sprintf("http://localhost:%d", currentPort), 301)
-	})
+	setUpFileEndpoints(ports)
 	http.ListenAndServe(":9090", nil)
 }
