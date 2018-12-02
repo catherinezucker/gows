@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var fileCache cache.Cache
+var fileCache *cache.Cache
 var baseDirectory string
 
 func healthcheck(w http.ResponseWriter, r *http.Request)  {
@@ -21,11 +21,15 @@ func healthcheck(w http.ResponseWriter, r *http.Request)  {
 
 func fileHandler(path string) func(w http.ResponseWriter, r *http.Request)  {
 	return func(w http.ResponseWriter, r *http.Request)  {
+		fmt.Printf("Trying to access file at %s\n", path)
 		content := fileCache.Get(path)
+		fmt.Printf("Cache try returned\n")
 		if content != nil {
+			fmt.Printf("Cache hit\n")
 			w.Write(content)
 		} else {
 			content, err := ioutil.ReadFile(path)
+			fmt.Printf("Content read\n")
 			if err != nil {
 				log.Printf("Could not read file at path %s\n", path)
 				return
@@ -41,7 +45,8 @@ func visitFile(path string, info os.FileInfo, err error) error {
 		return err
 	}
 	if !info.IsDir() {
-		relativePath := strings.Replace(path, baseDirectory, "", 1)
+		relativePath := strings.Replace(path, baseDirectory, "/", 1)
+		fmt.Printf("Adding endpoint at %s\n", relativePath)
 		http.HandleFunc(relativePath, fileHandler(path))
 	}
 	return nil
@@ -57,6 +62,7 @@ func setUpFileEndpoints()  {
 func main() {
 	baseDirectory = os.Args[1]
 	port := ":" + os.Args[2]
+	fileCache = cache.NewCache()
 	http.HandleFunc("/healthcheck", healthcheck)
 	setUpFileEndpoints()
 	err := http.ListenAndServe(port, nil)

@@ -17,12 +17,20 @@ type Cache struct {
 	lock *sync.Mutex
 }
 
+// NewCache is the constructor for Cache
+func NewCache() *Cache {
+	return &Cache{
+		items: make(map[string]Entry),
+		lock: &sync.Mutex{},
+	}
+}
+
 // Get returns the content from the Cache for the given key or nil 
 //   if there is no entry for the key
 func (cache *Cache) Get(key string) []byte  {
 	cache.lock.Lock()
 	defer cache.lock.Unlock()
-	
+
 	if entry, present := cache.items[key]; present  {
 		return entry.Content
 	}
