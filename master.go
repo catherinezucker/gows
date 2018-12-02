@@ -1,6 +1,8 @@
 package main
 
 import(
+	"fmt"
+	"net/http"
 	"log"
 	"os"
 	"os/exec"
@@ -19,7 +21,7 @@ type ServerJob struct {
 // Starts a single server and adds it on to the channel
 func startServer(dir string, port int, serverJobs chan ServerJob)  {
 	// Start the server
-	cmd := exec.Command("./server", dir, strconv.Itoa(port))
+	cmd := exec.Command("./server/server", dir, strconv.Itoa(port))
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("Server at port: %d failed to start\n", port)
@@ -34,8 +36,8 @@ func startServer(dir string, port int, serverJobs chan ServerJob)  {
 
 // Starts servers and adds them on to the channel
 func initServers(serverJobs chan ServerJob)  {
-	go startServer("/Users/robertcarney", 9090, serverJobs)
-	go startServer("/Users/robertcarney", 9091, serverJobs)
+	go startServer("/Users/robertcarney", 9000, serverJobs)
+	go startServer("/Users/robertcarney", 9001, serverJobs)
 }
 
 // Monitors the servers in serverJobs, and returns when it recieves on the quitChannel
@@ -88,15 +90,37 @@ func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChan
 	os.Exit(1)
 }
 
+
+func redirectOnChannel(ports chan int) func(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("In redirectOnChannel")
+	return func(w http.ResponseWriter, r *http.Request)  {
+		fmt.Println("In return func")
+		currentPort := <-ports
+		fmt.Printf("Port recieved from channel was %d\n", currentPort)
+		ports <- currentPort
+		http.Redirect(w, r, fmt.Sprintf("http://localhost:%d", currentPort), 301)
+	}
+}
+
 func main()  {
 	log.SetOutput(os.Stderr)
 	serverJobs := make(chan ServerJob, 2)
 	var quitChannels []chan bool
+	currentChannel := make(chan int, 2)
+	currentChannel <- 9000
+	currentChannel <- 9001
 	go initServers(serverJobs)
 	monitorServersQuitChannel := make(chan bool)
 	quitChannels = append(quitChannels, monitorServersQuitChannel)
 	go monitorServers(serverJobs, monitorServersQuitChannel)
 	signals := make(chan os.Signal, 2)
 	signal.Notify(signals, os.Interrupt, os.Kill)
-	cleanUpOnSignal(signals, serverJobs, quitChannels)
+	go cleanUpOnSignal(signals, serverJobs, quitChannels)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request)  {
+		currentPort := <-currentChannel
+		fmt.Printf("Port recieved from channel was %d\n", currentPort)
+		currentChannel <- currentPort
+		http.Redirect(w, r, fmt.Sprintf("http://localhost:%d", currentPort), 301)
+	})
+	http.ListenAndServe(":9090", nil)
 }
