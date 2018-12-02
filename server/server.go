@@ -12,13 +12,16 @@ import (
 	"time"
 )
 
+// Cache to be used
 var fileCache *cache.Cache
+// Base directory for the file server
 var baseDirectory string
 
 func healthcheck(w http.ResponseWriter, r *http.Request)  {
 	fmt.Fprintf(w, "Healthcheck succeeded")
 }
 
+// Endpoint handler for a file with the given path
 func fileHandler(path string) func(w http.ResponseWriter, r *http.Request)  {
 	return func(w http.ResponseWriter, r *http.Request)  {
 		fmt.Printf("Trying to access file at %s\n", path)
@@ -40,6 +43,7 @@ func fileHandler(path string) func(w http.ResponseWriter, r *http.Request)  {
 	}
 }
 
+// Add an endpoint for a given file path relative to the base directory
 func visitFile(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		return err
@@ -52,6 +56,8 @@ func visitFile(path string, info os.FileInfo, err error) error {
 	return nil
 }
 
+// Add an endpoint for every file (not directories) in the 
+//    base directory
 func setUpFileEndpoints()  {
 	err := filepath.Walk(baseDirectory, visitFile)
 	if err != nil  {
