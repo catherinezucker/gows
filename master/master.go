@@ -1,4 +1,4 @@
-package main
+package master
 
 import(
 	"fmt"
@@ -161,11 +161,7 @@ func Run(serverConfig config.Config)  {
 	http.ListenAndServe(fmt.Sprintf(":%d", serverConfig.MasterPort), nil)
 }
 
-func main()  {
-	log.SetOutput(os.Stderr)
-	serverConfig := config.LoadConfiguration("conf/config.json")
-	Run(serverConfig)
-}
+
 
 
 
