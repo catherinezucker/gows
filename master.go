@@ -92,7 +92,6 @@ func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChan
 
 
 func redirectOnChannel(ports chan int) func(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("In redirectOnChannel")
 	return func(w http.ResponseWriter, r *http.Request)  {
 		fmt.Println("In return func")
 		currentPort := <-ports
