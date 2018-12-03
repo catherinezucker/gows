@@ -19,10 +19,12 @@ type Cache struct {
 
 // NewCache is the constructor for Cache
 func NewCache() *Cache {
-	return &Cache{
+	c := &Cache{
 		items: make(map[string]Entry),
 		lock: &sync.Mutex{},
 	}
+	go c.monitorCache(10 * time.Second)
+	return c
 }
 
 // Get returns the content from the Cache for the given key or nil 
@@ -37,6 +39,20 @@ func (cache *Cache) Get(key string) []byte  {
 	return nil
 }
 
+// monitorCache monitors the cache once per the given duration
+func (cache *Cache) monitorCache(duration time.Duration)  {
+	for {
+		time.Sleep(duration)
+		cache.lock.Lock()
+		for key, entry := range cache.items  {
+			if entry.Expiration > time.Now().UnixNano()  {
+				delete(cache.items, key)
+			}
+		}
+		cache.lock.Unlock()
+	}
+}
+
 // Set sets the content for the entry at the given key to the given content, 
 //   and keeps it for the given duration
 func (cache *Cache) Set(key string, content []byte, duration time.Duration)  {
@@ -48,8 +64,6 @@ func (cache *Cache) Set(key string, content []byte, duration time.Duration)  {
 		Expiration: time.Now().Add(duration).UnixNano(),
 	}
 }
-
-
 
 
 
