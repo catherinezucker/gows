@@ -4,9 +4,10 @@ CS5600 Final Project, Fast Fault-Tolerant File Server Written in Go
 ## How to run
 There is a Makefile included for building and running a simple server. 
 To run a server:
-1. Edit the `conf/config.json` file. Choose a directory to serve and appreoriate ports to use. You can also add or remove workers.
-2. Run `make run` on the command line to run the default configurations.
-3. Navigate to `http://localhost:{PORT}/{RELATIVE FILE PATH}` to view a file in the browser.
+1. Clone the repository to `{GOPATH}/github.com/robcarney/`
+2. Edit the `conf/config.json` file. Choose a directory to serve and appreoriate ports to use. You can also add or remove workers.
+3. Run `make run` on the command line to run the default configurations.
+4. Navigate to `http://localhost:{PORT}/{RELATIVE FILE PATH}` to view a file in the browser.
 
 ## Master Server
 The master server's role is to spawn multiple worker servers as child processes, and then monitor the health of the servers and redirect requests to the various servers. The master monitors the health of the servers via the `/healthcheck` endpoint. If a worker server is deemed to be unhealthy, the master kills the server and starts up another (this adds a level of fault-tolerance). The master redirects the requests to worker servers by issuing a HTTP redirect to a worker server, which is chosen via a roud-robin strategy.
