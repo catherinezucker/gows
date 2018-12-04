@@ -36,8 +36,10 @@ Here, `workers` represents configurations for each worker, `baseDirectory` is th
 ## Benchmarking
 TODO: Info on benchmarking
 
-## Potential Improvements
-TODO: Info on improvements
+## Future Improvements
+1. Extend to a distributed protocol: Make it so that the master and client servers can be on different machines.
+2. Different port forwarding techinique: Right now the master uses HTTP redirects to send requests. It would be better to use a strategy similar to a reverse proxy, in which the master would act as a middle man between the client and the worker server.
+3. Extended Configurations: Add more configurations to allow users more control over the system. 
 
 
 
