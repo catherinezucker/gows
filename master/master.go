@@ -3,6 +3,8 @@ package master
 import(
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"log"
 	"os"
 	"os/exec"
@@ -106,9 +108,20 @@ func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChan
 // Returns a http handler function requests to a port popped off the given channel for the given endpoint
 func redirectOnChannel(serverJobs chan ServerJob, endpoint string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request)  {
+		// Get a job from the channel, and immidiately add it back in
 		currentJob := <-serverJobs
 		serverJobs <- currentJob
-		http.Redirect(w, r, fmt.Sprintf("http://%s:%d/%s", currentJob.host, currentJob.port, endpoint), 301)
+		url, _ := url.Parse(fmt.Sprintf("http://%s:%d", currentJob.host, currentJob.port))
+		proxy := httputil.NewSingleHostReverseProxy(url)
+
+		// Set the new URL for the request
+		r.URL.Host = url.Host
+		r.URL.Scheme = url.Scheme
+		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+		r.Host = url.Host
+
+		// Serve this request via our reverse proxy
+		proxy.ServeHTTP(w, r)
 	}
 }
 
