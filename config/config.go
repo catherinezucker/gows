@@ -8,6 +8,7 @@ import (
 
 // ServerWorker is the data structure representing a single server worker
 type ServerWorker struct {
+	Host string `json:"host"`
 	Port int `json:"port"`
 }
 

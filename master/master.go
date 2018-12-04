@@ -19,6 +19,7 @@ var baseDirectory string
 
 // ServerJob represents a server worker process
 type ServerJob struct {
+	host string
 	port int
 	dir string
 	command *exec.Cmd
@@ -35,6 +36,7 @@ func startServer(worker config.ServerWorker) (ServerJob, error) {
 	log.Printf("Started server for directory %s at port :%d with PID: %d\n", 
 		baseDirectory, worker.Port, cmd.Process.Pid)
 	return ServerJob{
+		host: worker.Host,
 		port: worker.Port,
 		dir: baseDirectory,
 		command: cmd,
@@ -66,7 +68,7 @@ func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 			time.Sleep(5 * time.Second)
 			// Get a job from the channel...
 			currentJob := <- serverJobs
-			log.Printf("Looking at server on port: %d\n", currentJob.port)
+			log.Printf("Looking at server at %s:%d\n", currentJob.host, currentJob.port)
 			// Monitor the job...
 			if (!serverIsHealthy(currentJob)) {
 				log.Printf("Server process at port: %d with PID: %d exited\n", 
@@ -102,17 +104,17 @@ func cleanUpOnSignal(signals chan os.Signal, serverJobs chan ServerJob, quitChan
 }
 
 // Returns a http handler function requests to a port popped off the given channel for the given endpoint
-func redirectOnChannel(ports chan int, endpoint string) func(w http.ResponseWriter, r *http.Request) {
+func redirectOnChannel(serverJobs chan ServerJob, endpoint string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request)  {
-		currentPort := <-ports
-		ports <- currentPort
-		http.Redirect(w, r, fmt.Sprintf("http://localhost:%d/%s", currentPort, endpoint), 301)
+		currentJob := <-serverJobs
+		serverJobs <- currentJob
+		http.Redirect(w, r, fmt.Sprintf("http://%s:%d/%s", currentJob.host, currentJob.port, endpoint), 301)
 	}
 }
 
 // Returns a function to be called for each file and directory in the base directory with filepath.Walk
 //   The function returned sets up an endpoint for the given file
-func getFileVisitor(ports chan int) func(path string, info os.FileInfo, err error) error {
+func getFileVisitor(serverJobs chan ServerJob) func(path string, info os.FileInfo, err error) error {
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -128,14 +130,14 @@ func getFileVisitor(ports chan int) func(path string, info os.FileInfo, err erro
 		}
 		log.Printf("Setting up endpoint for %s\n", relativePath)
 		// Bind the http handler
-		http.HandleFunc(relativePath, redirectOnChannel(ports, relativePath))
+		http.HandleFunc(relativePath, redirectOnChannel(serverJobs, relativePath))
 		return nil
 	}
 }
 
 // Sets up endpoints for all files in the base directory
-func setUpFileEndpoints(ports chan int)  {
-	err := filepath.Walk(baseDirectory, getFileVisitor(ports))
+func setUpFileEndpoints(serverJobs chan ServerJob)  {
+	err := filepath.Walk(baseDirectory, getFileVisitor(serverJobs))
 	if err != nil  {
 		log.Fatal("setUpFileEndpoints: ", err)
 	}
@@ -157,7 +159,7 @@ func Run(serverConfig config.Config)  {
 	signals := make(chan os.Signal, 2)
 	signal.Notify(signals, os.Interrupt, os.Kill)
 	go cleanUpOnSignal(signals, serverJobs, quitChannels)
-	setUpFileEndpoints(ports)
+	setUpFileEndpoints(serverJobs)
 	http.ListenAndServe(fmt.Sprintf(":%d", serverConfig.MasterPort), nil)
 }
 
