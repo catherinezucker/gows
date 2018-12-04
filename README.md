@@ -21,9 +21,11 @@ The master server's parameters can be configured within `conf/config.go`. An exa
 {
   "workers" :[
     {
+      "host": "127.0.0.1",
       "port" : 9000
     },
     {
+      "host": "127.0.0.1",
       "port" : 9001
     }
   ],
@@ -31,7 +33,11 @@ The master server's parameters can be configured within `conf/config.go`. An exa
   "masterPort": 9090
 }
 ```
-Here, `workers` represents configurations for each worker, `baseDirectory` is the directory for the servers to serve files from, and `masterPort` is the port number for the master to listen on.
+* `workers` represents configurations for each worker 
+  * `host` represents the host address of the worker, currently only localhost (127.0.0.1) is supported as we do not yet support a distrubuted architecture
+  * `port` represents the port for the worker to listen on
+* `baseDirectory` is the directory for the servers to serve files from
+* `masterPort` is the port number for the master to listen on.
 
 ## Benchmarking
 TODO: Info on benchmarking
