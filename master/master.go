@@ -28,18 +28,18 @@ type ServerJob struct {
 }
 
 // Starts a single server and adds it on to the channel
-func startServer(worker config.ServerWorker) (ServerJob, error) {
+func startServer(port int, host string) (ServerJob, error) {
 	// Start the server
-	cmd := exec.Command("./server/server", baseDirectory, strconv.Itoa(worker.Port))
+	cmd := exec.Command("./server/server", baseDirectory, strconv.Itoa(port))
 	err := cmd.Start()
 	if err != nil {
-		log.Printf("Server at port: %d failed to start\n", worker.Port)
+		log.Printf("Server at port: %d failed to start\n", port)
 	}
 	log.Printf("Started server for directory %s at port :%d with PID: %d\n", 
-		baseDirectory, worker.Port, cmd.Process.Pid)
+		baseDirectory, port, cmd.Process.Pid)
 	return ServerJob{
-		host: worker.Host,
-		port: worker.Port,
+		host: host,
+		port: port,
 		dir: baseDirectory,
 		command: cmd,
 	}, err
@@ -48,7 +48,7 @@ func startServer(worker config.ServerWorker) (ServerJob, error) {
 // Starts servers and adds them on to the channel
 func initServers(serverJobs chan ServerJob, workers []config.ServerWorker)  {
 	for _, worker := range workers  {
-		job, err := startServer(worker)
+		job, err := startServer(worker.Port, worker.Host)
 		if (err == nil)  {
 			serverJobs <- job
 		}
