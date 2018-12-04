@@ -2,12 +2,13 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"os"
 )
 
 // ServerWorker is the data structure representing a single server worker
 type ServerWorker struct {
+	Host string `json:"host"`
 	Port int `json:"port"`
 }
 
@@ -19,14 +20,14 @@ type Config struct {
 }
 
 // LoadConfiguration loads configuration given the config file
-func LoadConfiguration(file string) Config {
+func LoadConfiguration(file string) (Config, error) {
 	var config Config
 	configFile, err := os.Open(file)
 	defer configFile.Close()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatal("Load Configuration: ", err)
 	}
 	jsonParser := json.NewDecoder(configFile)
-	jsonParser.Decode(&config)
-	return config
+	err = jsonParser.Decode(&config)
+	return config, err
 }

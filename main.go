@@ -11,6 +11,9 @@ import (
 
 func main()  {
 	log.SetOutput(os.Stderr)
-	serverConfig := config.LoadConfiguration("conf/config.json")
+	serverConfig, err := config.LoadConfiguration("conf/config.json")
+	if err != nil {
+		log.Fatal("Load Configuration: ", err)
+	}
 	master.Run(serverConfig)
 }
