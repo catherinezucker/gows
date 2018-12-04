@@ -5,7 +5,7 @@ CS5600 Final Project, Fast Fault-Tolerant File Server Written in Go
 There is a Makefile included for building and running a simple server. 
 To run a server:
 1. Clone the repository to `{GOPATH}/github.com/robcarney/`
-2. Edit the `conf/config.json` file. Choose a directory to serve and appreoriate ports to use. You can also add or remove workers.
+2. Edit the `conf/config.json` file. Choose a directory to serve and approriate ports to use. You can also add or remove workers.
 3. Run `make run` on the command line to run the default configurations.
 4. Navigate to `http://localhost:{PORT}/{RELATIVE FILE PATH}` to view a file in the browser.
 
