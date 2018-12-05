@@ -1,5 +1,7 @@
 # Project binaries
 main
+server/server
+
 
 # Binaries for programs and plugins
 *.exe
