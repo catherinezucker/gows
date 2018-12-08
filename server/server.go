@@ -18,7 +18,7 @@ var fileCache *cache.Cache
 var baseDirectory string
 
 func healthcheck(w http.ResponseWriter, r *http.Request)  {
-	fmt.Fprintf(w, "Healthcheck succeeded")
+	w.WriteHeader(http.StatusOK)
 }
 
 // Endpoint handler for a file with the given path

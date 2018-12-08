@@ -75,18 +75,35 @@ func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 			if (!serverIsHealthy(currentJob)) {
 				log.Printf("Server process at port: %d with PID: %d exited\n", 
 					currentJob.port, currentJob.command.Process.Pid)
-				continue
+				newJob, err := startServer(currentJob.port, currentJob.host)
+				if err != nil {
+					log.Printf("Unable to restart server process at port: %d\n%s\n", currentJob.port, err.Error())
+				} else {
+					log.Printf("Restarted Server process at port: %d with PID: %d\n",
+						currentJob.port, currentJob.command.Process.Pid)
+					serverJobs <- newJob
+				}
+			} else {
+				// And put it back on the channel
+				serverJobs <- currentJob
 			}
-			// And put it back on the channel
-			serverJobs <- currentJob
 		}
 	}
 }
 
 // Checks on the health of a server job by sending a test request to the /healthcheck endpoint
 func serverIsHealthy(serverJob ServerJob) bool {
-	// TODO
-	return true
+	healthCheckEndpoint := "http://" + serverJob.host + ":" + strconv.Itoa(serverJob.port) + "/healthcheck"
+	res, err := http.Head(healthCheckEndpoint)
+	if err != nil {
+		log.Printf("Error in healthcheck at %s:\n%s\n", healthCheckEndpoint, err.Error())
+		return false
+	} else if res.StatusCode != http.StatusOK {
+		log.Printf("Healthcheck fail, status code %d\n", res.StatusCode)
+		return false
+	}
+	log.Printf("Healthcheck to %s succeeded\n", healthCheckEndpoint)
+    return true
 }
 
 // Cleans up the running child processes (servers) when the program recieves an error signal
