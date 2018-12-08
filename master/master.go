@@ -28,9 +28,9 @@ type ServerJob struct {
 }
 
 // Starts a single server and adds it on to the channel
-func startServer(port int, host string, cacheDuration time.Duration) (ServerJob, error) {
+func startServer(port int, host string) (ServerJob, error) {
 	// Start the server
-	cmd := exec.Command("./server/server", getServerBinaryArgs(port, cacheDuration)...)
+	cmd := exec.Command("./server/server", baseDirectory, strconv.Itoa(port))
 	err := cmd.Start()
 	if err != nil {
 		log.Printf("Server at port: %d failed to start\n", port)
@@ -45,17 +45,10 @@ func startServer(port int, host string, cacheDuration time.Duration) (ServerJob,
 	}, err
 }
 
-func getServerBinaryArgs(port int, cacheDuration time.Duration) []string {
-	return []string{ "--port", strconv.Itoa(port), 
-		"--baseDirectory", baseDirectory,
-		"--cacheDuration", cacheDuration.String() }
-}
-
 // Starts servers and adds them on to the channel
 func initServers(serverJobs chan ServerJob, workers []config.ServerWorker)  {
 	for _, worker := range workers  {
-		cacheDuration, err := time.ParseDuration(worker.CacheDuration)
-		job, err := startServer(worker.Port, worker.Host, cacheDuration)
+		job, err := startServer(worker.Port, worker.Host)
 		if (err == nil)  {
 			serverJobs <- job
 		}

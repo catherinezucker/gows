@@ -2,13 +2,11 @@
   "workers" :[
     {
       "host": "127.0.0.1",
-      "port" : 9000,
-      "cacheDuration": "30s"
+      "port" : 9000
     },
     {
       "host": "127.0.0.1",
-      "port" : 9001,
-      "cacheDuration": "30s"
+      "port" : 9001
     }
   ],
   "baseDirectory": "/Users/robertcarney/tmp/",

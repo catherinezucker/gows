@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"flag"
+	"github.com/robcarney/gows/cache"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,14 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/robcarney/gows/cache"
 )
 
 // Cache to be used
 var fileCache *cache.Cache
-// Cache duration
-var cacheDuration time.Duration
 // Base directory for the file server
 var baseDirectory string
 
@@ -41,7 +37,7 @@ func fileHandler(path string) func(w http.ResponseWriter, r *http.Request)  {
 				log.Printf("Could not read file at path %s\n", path)
 				return
 			}
-			fileCache.Set(path, content, cacheDuration)
+			fileCache.Set(path, content, time.Second * 50)
 			w.Write(content)
 		}
 	}
@@ -53,10 +49,7 @@ func visitFile(path string, info os.FileInfo, err error) error {
 		return err
 	}
 	if !info.IsDir() {
-		relativePath := strings.Replace(path, baseDirectory, "", 1)
-		if relativePath[:1] != "/"  {
-			relativePath = "/" + relativePath
-		}
+		relativePath := strings.Replace(path, baseDirectory, "/", 1)
 		fmt.Printf("Adding endpoint at %s\n", relativePath)
 		http.HandleFunc(relativePath, fileHandler(path))
 	}
@@ -73,22 +66,12 @@ func setUpFileEndpoints()  {
 }
 
 func main() {
-	var port int
-	var cacheDurationArg string
-	var err error
-	flag.IntVar(&port, "port", 9000, "The port for this server to listen on")
-	flag.StringVar(&baseDirectory, "baseDirectory", "", "The base directory to serve files from")
-	flag.StringVar(&baseDirectory, "baseDirectory", "", "The base directory to serve files from")
-	flag.StringVar(&cacheDurationArg, "cacheDuration", "10s", "Duration for how long to keep files in cache")
-	cacheDuration, err = time.ParseDuration(cacheDurationArg)
-	if err != nil  {
-		log.Fatal("Parse Duration ", err)
-	}
-	flag.Parse()
+	baseDirectory = os.Args[1]
+	port := ":" + os.Args[2]
 	fileCache = cache.NewCache()
 	http.HandleFunc("/healthcheck", healthcheck)
 	setUpFileEndpoints()
-	err = http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		log.Fatal("Listen and serve: ", err)
 	}
