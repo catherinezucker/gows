@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,9 +18,41 @@ var fileCache *cache.Cache
 // Base directory for the file server
 var baseDirectory string
 
-func healthcheck(w http.ResponseWriter, r *http.Request)  {
-	w.WriteHeader(http.StatusOK)
+
+// extension to more complicated servers where we might want to set unhealthy
+type healthStruct struct {
+	lock *sync.Mutex;
+	isHealthy bool;
 }
+
+var health = healthStruct{lock: &sync.Mutex{}, isHealthy: true}
+
+func isHealthy() bool  {
+	health.lock.Lock()
+	defer health.lock.Unlock()
+	return health.isHealthy
+}
+
+func setHealthy() {
+	health.lock.Lock()
+	defer health.lock.Unlock()
+	health.isHealthy = true
+}
+
+func setUnHealthy() {
+	health.lock.Lock()
+	defer health.lock.Unlock()
+	health.isHealthy = false
+}
+
+func healthcheck(w http.ResponseWriter, r *http.Request)  {
+	if isHealthy() {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+}
+
 
 // Endpoint handler for a file with the given path
 func fileHandler(path string) func(w http.ResponseWriter, r *http.Request)  {

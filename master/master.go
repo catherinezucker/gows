@@ -73,6 +73,10 @@ func monitorServers(serverJobs chan ServerJob, quitChannel chan bool)  {
 			log.Printf("Looking at server at %s:%d\n", currentJob.host, currentJob.port)
 			// Monitor the job...
 			if (!serverIsHealthy(currentJob)) {
+				// ensure dead
+				currentJob.command.Process.Kill()
+				// removes zombie process
+				currentJob.command.Process.Wait()
 				log.Printf("Server process at port: %d with PID: %d exited\n", 
 					currentJob.port, currentJob.command.Process.Pid)
 				newJob, err := startServer(currentJob.port, currentJob.host)
