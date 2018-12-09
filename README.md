@@ -40,7 +40,9 @@ The master server's parameters can be configured within `conf/config.go`. An exa
 * `masterPort` is the port number for the master to listen on.
 
 ## Benchmarking
-TODO: Info on benchmarking
+ApacheBench was used to benchmark the server. Benchmarks were taken with 2, 10, and 100 workers using 5000 requests with 500 concurrent requests. The results were then compared against the standard Apache2 server. Both 2 and 10 workers performed noticeably worse than the Apache2 server for the majority of the test until the requests in the upper 4000s, at which point the Apache server's time increased exponentially bringing the overall performance of it significantly down. The Go web server on the other hand increased at a much lower rate over time and maintained good performance throughout. The Go server with 100 workers performed similarly to the Apache2 server through the early requests and only increased in response time slightly towards the end, making it overall the best performer. Of all four configurations tested only the Apache2 server had any failed requests while benchmarking.
+
+Response time for individual requests was also measured with the Go server responding about 11% slower. This suggests that the Apache2 server is better built for individual requests while the Go web server can better handle large numbers of concurrent requests.
 
 ## Future Improvements
 1. Extend to a distributed protocol: Make it so that the master and client servers can be on different machines.
