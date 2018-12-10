@@ -47,4 +47,3 @@ Response time for individual requests was also measured with the Go server respo
 ## Future Improvements
 1. Extend to a distributed protocol: Make it so that the master and client servers can be on different machines.
 2. Extended Configurations: Add more configurations to allow users more control over the system. 
-3. HTTPS Support: For added security, implement an option for communication over HTTPS (could be a config parameter).
