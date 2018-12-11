@@ -1,13 +1,28 @@
 \documentclass[10pt]{article}
-
-
+\usepackage{multicol}
+\usepackage[margin=0.75in]{geometry}
 \begin{document}
 
 \title{
   A Fast, Multi-Threaded, \\
   Master-Worker Web Server \\
-  \Large Proof of Concept in Go}
+  \Large Proof of Concept in Go
+}
   
-\author{Robert Carney, Donald Hamnett, and Nicholas Vann}
+\author{
+  Robert Carney, Donald Hamnett, and Nicholas Vann \\
+  Northeastern University \\
+  CS5600 Fall 2018 \\
+  Final Project 
+}
 \maketitle
+
+\section*{Abstract}
+\begin{multicols}{2}
+
+\par
+With the exponential increase in the use of the web and distributed computing in the last quarter century, the search for a fast and reliable web server is more important than ever.  One approach to achieving speed and reliability is a master-worker model, where a master process is given few responsibilities, and delegate the workload to a pool of separate processes, the workers.  Our project aimed to implement a proof of concept using our own flavor of the master-worker model.  When deciding which tool was best suited for this job, we decided to develop our solution in Go (Golang). Go was developed by Rob Pike and Ken Thompson (of Bell Labs/Unix/C lore) on behalf of Google.  Its goal was to create a developer-friendly, systems-level language which made some of the more involved tasks of multi-threaded programming easier than in C or C++.  Though created with Google's internal use in mind, Go has become a popular choice among several industry players for implementing micro services. We were able to achieve our goal using this previously unfamiliar language, with some interesting benchmarking results against the default configuration of one of the most widely used web servers in history, the Apache2 server.
+\section*{Why Go?}
+The advantages of Go for a web project are largely due to who it was created for and when it was created.  Google is one of the largest companies in the world, and its business functionality is heavily reliant on the internet and web services.  As such, one would expect that any language which they commissioned for their own use would have robust and well integrated HTTP and TCP/IP standard library support.  We found this to indeed be the case with Go, and when comparing documentation, APIs, and code examples across commonly used languages, it was clear that Go would be the quickest to get up to speed with in order to begin our web server implementation.  
+\end{multicols}
 \end{document}
